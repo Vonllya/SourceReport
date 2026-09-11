@@ -7,6 +7,7 @@ import random
 from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
+from pydantic import ValidationError
 
 from ..config import Settings
 from .base import LLMEmptyContent, LLMError, LLMOutputTruncated, LLMProvider, T
@@ -89,8 +90,12 @@ class OpenAILLMProvider(LLMProvider):
             return LLMError(messages.get(exc.status_code, f"LLM API failed with HTTP {exc.status_code}."))
         if isinstance(exc, (APITimeoutError, APIConnectionError, asyncio.TimeoutError)):
             return LLMError("LLM network request timed out or could not connect after finite retries.")
-        message = str(exc).replace(self.api_key, "[REDACTED]")
-        return LLMError(message)
+        if isinstance(exc, ValidationError):
+            # Never include input, custom messages, context, or unknown field names.
+            errors = exc.errors(include_input=False, include_context=False, include_url=False)
+            kinds = sorted({item["type"] for item in errors})
+            return LLMError("LLM response schema validation failed: " + ", ".join(kinds))
+        return LLMError("LLM response processing failed.")
 
     async def _create(self, *, prompt: str, node: str, structured: bool) -> Any:
         kwargs = self._request_kwargs(node, structured=structured)
@@ -136,11 +141,11 @@ class OpenAILLMProvider(LLMProvider):
                     break
                 repair = "\nThe prior response was empty or truncated. Produce a smaller complete JSON object."
             except Exception as exc:
-                error = exc
+                error = self._safe_error(exc)
                 if isinstance(exc, LLMError):
                     raise
                 repair = "\nThe prior response was invalid. Repair it and return only valid JSON."
-        raise LLMError(f"{node} structured output failed after one repair attempt: {error}")
+        raise LLMError(f"{node} structured output failed after one repair attempt: {error}") from None
 
     async def text(self, prompt: str, *, node: str = "text") -> str:
         response = await self._create(prompt=prompt, node=node, structured=False)

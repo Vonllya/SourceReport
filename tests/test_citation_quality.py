@@ -137,3 +137,86 @@ def test_inline_markdown_does_not_confuse_links_code_or_sentence_offsets():
         ("`not [S9].` A [S8](https://example.com) fact.", []),
     ]
     assert all(report[c.start_offset:c.end_offset] == c.text for c in claims)
+
+
+@pytest.mark.parametrize("report", [
+    "> First factual claim [S1].\n> Second factual claim without citation.\n",
+    "- First factual claim [S1].\n  Second factual claim without citation.\n",
+    "> First factual claim [S1].\r\n> Second factual claim without citation.\r\n",
+    "> - First factual claim [S1].\n>   Second factual claim without citation.\n",
+])
+def test_multiline_containers_preserve_claims_and_patch_offsets(report):
+    claims = ResearchWorkflow._atomic_claims(report)
+    assert [c.source_ids for c in claims] == [["S1"], []]
+    assert [c.text for c in claims] == [
+        "First factual claim [S1].", "Second factual claim without citation.",
+    ]
+    assert all(report[c.start_offset:c.end_offset] == c.text for c in claims)
+    patched, applied = ResearchWorkflow._apply_claim_patches(
+        report, ClaimPatchBatch(patches=[ClaimPatch(
+            claim_id="CL2", action="replace", replacement="Corrected fact [S1].",
+        )]), {"CL2": claims[1]}, {"S1": {}},
+    )
+    assert applied == 1
+    assert patched == report.replace("Second factual claim without citation.", "Corrected fact [S1].")
+
+
+def test_single_claim_spanning_quote_lines_keeps_exact_source_span():
+    report = "> A factual claim that\n> continues here [S1].\n"
+    claims = ResearchWorkflow._atomic_claims(report)
+    assert len(claims) == 1
+    assert claims[0].source_ids == ["S1"]
+    assert report[claims[0].start_offset:claims[0].end_offset] == claims[0].text
+
+
+def test_escaped_table_pipe_is_not_a_column_and_patch_keeps_other_cell():
+    report = "| Finding | Other |\n| --- | --- |\n| A \\| B is supported [S1]. | Other fact [S2]. |\n"
+    claims = ResearchWorkflow._atomic_claims(report)
+    assert [c.text for c in claims] == [r"A \| B is supported [S1].", "Other fact [S2]."]
+    assert all(report[c.start_offset:c.end_offset] == c.text for c in claims)
+    patched, applied = ResearchWorkflow._apply_claim_patches(
+        report, ClaimPatchBatch(patches=[ClaimPatch(
+            claim_id="CL1", action="replace", replacement="Narrower fact [S1].",
+        )]), {"CL1": claims[0]}, {"S1": {}},
+    )
+    assert applied == 1
+    assert patched == report.replace(r"A \| B is supported [S1].", "Narrower fact [S1].")
+
+
+def test_reference_tables_are_excluded_but_later_body_tables_are_audited():
+    report = "## References\n\n| Source |\n| --- |\n| [S1] Documentation |\n\n## Findings\n\n| Fact |\n| --- |\n| Actual fact [S1]. |\n"
+    assert [c.text for c in ResearchWorkflow._atomic_claims(report)] == ["Actual fact [S1]."]
+
+
+@pytest.mark.parametrize("replacement", [
+    "## References\n\nReplacement [S1].",
+    "## References [S1]",
+    "> Replacement [S1].",
+    "Replacement [S1].\n\n```",
+    "Replacement [S1]. <!--",
+])
+def test_local_patch_cannot_hide_untouched_claims(replacement):
+    report = "Unsupported fact [S1].\n\nSupported fact [S1]."
+    claims = ResearchWorkflow._atomic_claims(report)
+    patched, applied = ResearchWorkflow._apply_claim_patches(
+        report, ClaimPatchBatch(patches=[ClaimPatch(
+            claim_id="CL1", action="replace", replacement=replacement,
+        )]), {"CL1": claims[0]}, {"S1": {}},
+    )
+    assert (patched, applied) == (report, 0)
+
+
+@pytest.mark.parametrize("report", [
+    "- A claim\n\tcontinues [S1].",
+    "A claim\x00 [S1].",
+    "> | Fact |\n> | --- |\n> | Evidence [S1]. |",
+    "> > | Fact |\n> > | --- |\n> > | Evidence [S1]. |",
+    "| Fact |\n| --- |\n| Evidence [S1] ends with escaped \\|",
+])
+def test_normalized_markdown_and_nested_tables_keep_exact_source_offsets(report):
+    claims = ResearchWorkflow._atomic_claims(report)
+    assert len(claims) == 1
+    assert claims[0].source_ids == ["S1"]
+    assert report[claims[0].start_offset:claims[0].end_offset] == claims[0].text
+    if report.endswith(r"\|"):
+        assert claims[0].text.endswith(r"\|")

@@ -45,17 +45,34 @@ class SQLiteStore:
                 );
             """)
 
-    def save_state(self, state: dict[str, Any], status: str = "running") -> None:
+    @staticmethod
+    def _save_state(db: sqlite3.Connection, state: dict[str, Any], status: str) -> None:
         task_id = state["task_id"]
         state_json = json.dumps(state, ensure_ascii=False, default=str)
+        db.execute("""INSERT INTO tasks(task_id, question, status, state_json, report)
+            VALUES(?,?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET status=excluded.status,
+            state_json=excluded.state_json, report=excluded.report, updated_at=CURRENT_TIMESTAMP""",
+            (task_id, state.get("question", ""), status, state_json, state.get("report", "")))
+        for source in state.get("sources", []):
+            db.execute("""INSERT OR REPLACE INTO sources(task_id, source_id, title, url, metadata_json)
+                VALUES(?,?,?,?,?)""", (task_id, source["source_id"], source["title"], str(source["url"]), json.dumps(source, ensure_ascii=False, default=str)))
+
+    def save_state(self, state: dict[str, Any], status: str = "running") -> None:
         with self.connect() as db:
-            db.execute("""INSERT INTO tasks(task_id, question, status, state_json, report)
-                VALUES(?,?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET status=excluded.status,
-                state_json=excluded.state_json, report=excluded.report, updated_at=CURRENT_TIMESTAMP""",
-                (task_id, state.get("question", ""), status, state_json, state.get("report", "")))
-            for source in state.get("sources", []):
-                db.execute("""INSERT OR REPLACE INTO sources(task_id, source_id, title, url, metadata_json)
-                    VALUES(?,?,?,?,?)""", (task_id, source["source_id"], source["title"], str(source["url"]), json.dumps(source, ensure_ascii=False, default=str)))
+            self._save_state(db, state, status)
+
+    def commit_node(
+        self, state: dict[str, Any], node: str, node_status: str,
+        task_status: str, errors: list[str], detail: str = "",
+    ) -> None:
+        """Commit the checkpoint and its recovery cursor in one transaction."""
+        with self.connect() as db:
+            self._save_state(db, state, task_status)
+            for message in errors:
+                db.execute("INSERT INTO errors(task_id,node,message) VALUES(?,?,?)",
+                           (state["task_id"], node, message[:4000]))
+            db.execute("INSERT INTO node_runs(task_id,node,status,detail) VALUES(?,?,?,?)",
+                       (state["task_id"], node, node_status, detail[:2000]))
 
     def record_node(self, task_id: str, node: str, status: str, detail: str = "") -> None:
         with self.connect() as db:

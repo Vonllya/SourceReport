@@ -93,10 +93,11 @@ class WorkflowNodes(CitationAuditMixin):
                 )
                 update["metrics"] = merged["metrics"]
                 if self.store:
-                    for message in merged.get("errors", [])[len(state.get("errors", [])):]:
-                        self.store.record_error(state["task_id"], name, message)
-                    self.store.save_state(merged, "completed" if name == "verify_citations" else "running")
-                    self.store.record_node(state["task_id"], name, "completed")
+                    self.store.commit_node(
+                        merged, name, "completed",
+                        "completed" if name == "verify_citations" else "running",
+                        merged.get("errors", [])[len(state.get("errors", [])):],
+                    )
                 log_event(
                     logger, "node_completed", task_id=state["task_id"], node=name,
                     elapsed_seconds=round(time.monotonic() - node_started, 3),
@@ -106,11 +107,9 @@ class WorkflowNodes(CitationAuditMixin):
             except Exception as exc:
                 message = f"{name}: {type(exc).__name__}: {exc}"
                 if self.store:
-                    self.store.record_node(state["task_id"], name, "failed", message)
-                    self.store.record_error(state["task_id"], name, message)
                     failed = deepcopy(state)
                     self._update_metrics(failed, name, time.monotonic() - node_started, before)
-                    self.store.save_state(failed, "failed")
+                    self.store.commit_node(failed, name, "failed", "failed", [message], message)
                 log_event(
                     logger, "node_failed", task_id=state["task_id"], node=name,
                     error_type=type(exc).__name__,

@@ -1,5 +1,7 @@
 """Markdown-aware atomic claim parsing."""
 
+import re
+
 from markdown_it import MarkdownIt
 
 from ..models import AtomicClaim
@@ -126,15 +128,22 @@ class CitationParserMixin:
                 if stack and stack[-1] == "heading_open":
                     stack.pop()
                 continue
-            if token.type == "tr_open" and "tbody_open" in stack and token.map is not None:
+            if (token.type == "tr_open" and "tbody_open" in stack
+                    and token.map is not None and references_level is None):
                 start_line, end_line = token.map
                 block_start = line_offsets[start_line]
                 block_end = line_offsets[min(end_line, len(line_offsets) - 1)]
                 raw_row = report[block_start:block_end]
-                row_text = raw_row.strip().strip("|").strip()
-                row_start = raw_row.find(row_text)
+                row_start = re.match(r"(?:[ \t]*>[ \t]?)*[ \t]*", raw_row).end()
+                row_text = raw_row[row_start:].rstrip("\r\n").strip()
+                row_start = raw_row.find(row_text, row_start)
+                if row_text.startswith("|"):
+                    row_text = row_text[1:]
+                    row_start += 1
+                if row_text.endswith("|") and not row_text.endswith("\\|"):
+                    row_text = row_text[:-1]
                 cell_cursor = 0
-                for raw_cell in row_text.split("|"):
+                for raw_cell in re.split(r"(?<!\\)\|", row_text):
                     cell = raw_cell.strip()
                     cell_start = row_text.find(cell, cell_cursor)
                     cell_cursor = cell_start + len(cell)
@@ -170,9 +179,36 @@ class CitationParserMixin:
             block_start = line_offsets[start_line]
             block_end = line_offsets[min(end_line, len(line_offsets) - 1)]
             raw_block = report[block_start:block_end]
-            inline_start = raw_block.find(token.content)
-            if inline_start < 0:
-                continue
+            # Markdown removes container prefixes and normalizes newlines.
+            # Map each inline character back to its original source position.
+            positions: list[int] = []
+            raw_lines = raw_block.splitlines(keepends=True)
+            content_lines = token.content.split("\n")
+            cursor = 0
+            for index, content_line in enumerate(content_lines):
+                if index >= len(raw_lines):
+                    raise ValueError("Cannot map Markdown inline content to source")
+                raw_line = raw_lines[index]
+                normalized = ""
+                normalized_positions: list[int] = []
+                for offset, char in enumerate(raw_line):
+                    expanded = " " * (4 - len(normalized) % 4) if char == "\t" else char.replace("\0", "\ufffd")
+                    normalized += expanded
+                    normalized_positions.extend([block_start + cursor + offset] * len(expanded))
+                # Inline tabs may be retained by Markdown; container indentation
+                # may instead be expanded. Preserve both source representations.
+                local_start = raw_line.replace("\0", "\ufffd").find(content_line)
+                if local_start >= 0:
+                    positions.extend(block_start + cursor + local_start + i
+                                     for i in range(len(content_line)))
+                else:
+                    local_start = normalized.find(content_line)
+                    if local_start < 0:
+                        raise ValueError("Cannot map Markdown inline content to source")
+                    positions.extend(normalized_positions[local_start:local_start + len(content_line)])
+                if index < len(content_lines) - 1:
+                    positions.append(block_start + cursor + len(raw_line.rstrip("\r\n")))
+                cursor += len(raw_line)
             if "td_open" in stack or "th_open" in stack:
                 node_type = "table_cell"
             elif "list_item_open" in stack:
@@ -184,8 +220,9 @@ class CitationParserMixin:
             for local_start, local_end in CitationParserMixin._sentence_spans(token.content):
                 sentence = token.content[local_start:local_end]
                 source_ids = CitationParserMixin._inline_source_ids(sentence)
-                start_offset = block_start + inline_start + local_start
-                end_offset = start_offset + len(sentence)
+                start_offset = positions[local_start]
+                end_offset = positions[local_end - 1] + 1
+                sentence = report[start_offset:end_offset]
                 claims.append(AtomicClaim(
                     claim_id=f"CL{len(claims) + 1}", text=sentence,
                     source_ids=source_ids, node_type=node_type,

@@ -7,6 +7,11 @@ All notable changes to EvidencePilot are documented here. The project follows
 
 ### Fixed
 
+- Preserve source offsets for multiline Markdown containers, tab indentation, nested tables, and escaped table separators.
+- Commit task checkpoints, node outcomes, and errors atomically for reliable recovery.
+- Exclude reference tables from citation audits and reject patches that hide untouched claims.
+- Remove raw response content from structured-output validation errors.
+
 - Reserve source capacity across research rounds so gap-driven searches can add evidence.
 - Keep model usage metrics task-local, including failed attempts and resumed tasks.
 - Include offline mock documents in the installed package.

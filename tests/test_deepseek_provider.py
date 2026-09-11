@@ -153,3 +153,31 @@ async def test_retryable_http_statuses_have_finite_retries(monkeypatch, status):
     with pytest.raises(LLMError, match="finite retries"):
         await llm.text("hello")
     assert len(stub.kwargs) == 3 and llm.retries == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("content", [
+    '{"status":"secret-test-key","reason":"private-response-marker"}',
+    '{"status":"supported","reason":"ok","private-response-marker":"secret-test-key"}',
+    'private-response-marker secret-test-key',
+])
+async def test_validation_failures_do_not_persist_response_content(tmp_path, content):
+    from evidencepilot.fetcher import WebFetcher
+    from evidencepilot.search import MockSearchProvider
+    from evidencepilot.storage import SQLiteStore
+    from evidencepilot.workflow import ResearchWorkflow
+
+    llm, _ = provider(Settings(), [response(content), response(content)])
+    store = SQLiteStore(str(tmp_path / "errors.db"))
+    workflow = ResearchWorkflow(llm, MockSearchProvider(), WebFetcher(), store)
+    with pytest.raises(LLMError) as caught:
+        await workflow.run("A safe research question")
+    task_id = store.list_tasks()[0]["task_id"]
+    with store.connect() as db:
+        errors = str(db.execute("SELECT message FROM errors").fetchall())
+        details = str([tuple(row) for row in db.execute("SELECT detail FROM node_runs")])
+        messages = str([tuple(row) for row in db.execute("SELECT message FROM errors")])
+    combined = str(caught.value) + errors + details + messages + str(store.load_state(task_id))
+    assert "secret-test-key" not in combined
+    assert "private-response-marker" not in combined
+    assert "schema validation failed" in str(caught.value)
