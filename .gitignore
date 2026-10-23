@@ -16,3 +16,9 @@ dist/
 build/
 *.egg-info/
 artifacts/
+
+# Local maintenance notes, excluded from the public repository.
+/CHANGELOG.md
+/SECURITY.md
+/docs/development.md
+/docs/architecture.md

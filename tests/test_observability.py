@@ -1,7 +1,7 @@
 import json
 import logging
 
-from evidencepilot.observability import JsonFormatter
+from sourcereport.observability import JsonFormatter
 
 
 def test_json_formatter_redacts_sensitive_field_names():

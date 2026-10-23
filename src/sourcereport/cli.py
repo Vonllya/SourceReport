@@ -43,8 +43,9 @@ async def _run(args) -> None:
 
 
 def main() -> None:
+    load_dotenv(Path.cwd() / ".env", override=False)
     configure_logging()
-    parser = argparse.ArgumentParser(prog="evidencepilot")
+    parser = argparse.ArgumentParser(prog="sourcereport")
     sub = parser.add_subparsers(dest="command", required=True)
     research = sub.add_parser("research")
     research.add_argument("question")

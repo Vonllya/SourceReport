@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 import pytest
 from dotenv import load_dotenv
 
-from evidencepilot.config import Settings
-from evidencepilot.search import TavilySearchProvider
+from sourcereport.config import Settings
+from sourcereport.search import TavilySearchProvider
 
 pytestmark = pytest.mark.live
 

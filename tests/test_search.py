@@ -1,7 +1,7 @@
 import pytest
 
-from evidencepilot.models import SearchResult
-from evidencepilot.search import TavilySearchProvider, deduplicate_queries, deduplicate_results
+from sourcereport.models import SearchResult
+from sourcereport.search import TavilySearchProvider, deduplicate_queries, deduplicate_results
 
 
 def test_search_result_url_and_similar_title_deduplication():
@@ -25,7 +25,7 @@ async def test_tavily_uses_basic_search_result_limit_and_configured_timeout(monk
         observed["timeout"] = timeout
         return await awaitable
 
-    monkeypatch.setattr("evidencepilot.retrieval.search.asyncio.wait_for", wait_for)
+    monkeypatch.setattr("sourcereport.retrieval.search.asyncio.wait_for", wait_for)
 
     class Client:
         async def search(self, **kwargs):

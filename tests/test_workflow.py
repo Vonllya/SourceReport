@@ -1,10 +1,10 @@
 import httpx
 import pytest
 
-from evidencepilot.app import create_runtime
-from evidencepilot.config import Settings
-from evidencepilot.fetcher import WebFetcher
-from evidencepilot.models import (
+from sourcereport.app import create_runtime
+from sourcereport.config import Settings
+from sourcereport.fetcher import WebFetcher
+from sourcereport.models import (
     CitationAudit,
     CitationBatch,
     CitationBatchItem,
@@ -13,10 +13,10 @@ from evidencepilot.models import (
     ResearchPlan,
     SearchResult,
 )
-from evidencepilot.providers import FakeLLMProvider, LLMProvider
-from evidencepilot.search import MockSearchProvider, SearchProvider
-from evidencepilot.storage import SQLiteStore
-from evidencepilot.workflow import ResearchWorkflow
+from sourcereport.providers import FakeLLMProvider, LLMProvider
+from sourcereport.search import MockSearchProvider, SearchProvider
+from sourcereport.storage import SQLiteStore
+from sourcereport.workflow import ResearchWorkflow
 
 
 class EmptySearch(SearchProvider):
@@ -96,7 +96,7 @@ async def test_failed_http_fetch_is_recorded_as_snippet_fallback():
 
 @pytest.mark.asyncio
 async def test_timeout_is_retried_after_first_fetch_pass():
-    from evidencepilot.fetcher import FetchedPage
+    from sourcereport.fetcher import FetchedPage
 
     class RetryingFetcher:
         def __init__(self):
@@ -303,7 +303,7 @@ async def test_resume_with_new_provider_preserves_failed_attempt_usage(tmp_path)
 
 
 def test_full_source_budget_stops_unproductive_supplemental_searches():
-    from evidencepilot.workflow.routing import evaluation_route
+    from sourcereport.workflow.routing import evaluation_route
 
     assert evaluation_route({
         "evaluation": {"sufficient": False}, "research_round": 1,

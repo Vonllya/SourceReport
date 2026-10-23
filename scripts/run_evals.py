@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evidencepilot.evals import (
+from sourcereport.evals import (
     DEFAULT_CORPUS,
     DEFAULT_SEMANTIC_THRESHOLDS,
     DEFAULT_THRESHOLDS,

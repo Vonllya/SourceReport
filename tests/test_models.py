@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from evidencepilot.config import Settings
-from evidencepilot.models import ResearchPlan, SubQuestion
+from sourcereport.config import Settings
+from sourcereport.models import ResearchPlan, SubQuestion
 
 
 def test_research_plan_validation():

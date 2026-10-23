@@ -10,8 +10,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evidencepilot.app import create_runtime
-from evidencepilot.config import Settings
+from sourcereport.app import create_runtime
+from sourcereport.config import Settings
 
 QUESTION = (
     "LangGraph 的持久化 checkpoint 解决了什么问题？请基于公开技术资料总结，"
@@ -49,7 +49,7 @@ async def main() -> None:
         openai_base_url="https://api.deepseek.com",
         openai_model="deepseek-v4-flash",
         llm_thinking_mode="disabled",
-        llm_max_tokens_structured=min(Settings.from_env().llm_max_tokens_structured, 2048),
+        llm_max_tokens_structured=min(Settings.from_env().llm_max_tokens_structured, 4096),
         llm_max_tokens_report=4096,
         max_queries_per_round=3,
         results_per_query=3,

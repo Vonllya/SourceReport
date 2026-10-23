@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Any
 
@@ -22,12 +23,13 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 
-def configure_logging(level: str = "INFO") -> None:
+def configure_logging(level: str | None = None) -> None:
     handler = logging.StreamHandler()
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
     root.handlers[:] = [handler]
-    root.setLevel(level.upper())
+    configured_level = level or os.getenv("SOURCEREPORT_LOG_LEVEL") or "INFO"
+    root.setLevel(configured_level.upper())
 
 
 def log_event(logger: logging.Logger, event: str, **fields: Any) -> None:

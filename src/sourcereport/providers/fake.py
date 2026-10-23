@@ -68,7 +68,7 @@ class FakeLLMProvider(LLMProvider):
 
 
 def load_mock_documents() -> list[dict[str, str]]:
-    path = files("evidencepilot").joinpath("resources/mock_sources.json")
+    path = files("sourcereport").joinpath("resources/mock_sources.json")
     return json.loads(path.read_text(encoding="utf-8"))
 
 __all__ = ["FakeLLMProvider", "load_mock_documents"]

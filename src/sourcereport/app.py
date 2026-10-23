@@ -27,7 +27,7 @@ def create_runtime(settings: Settings | None = None) -> Runtime:
         if not settings.openai_api_key:
             raise ValueError(
                 f"LLM_PROVIDER={settings.llm_provider} requires OPENAI_API_KEY; "
-                "use LLM_PROVIDER=mock explicitly for offline mode"
+                "set your model service API key in .env and restart the application"
             )
         llm = OpenAILLMProvider(
             settings.openai_api_key, settings.openai_base_url, settings.openai_model, settings
@@ -40,7 +40,7 @@ def create_runtime(settings: Settings | None = None) -> Runtime:
         if not settings.tavily_api_key:
             raise ValueError(
                 "SEARCH_PROVIDER=tavily requires TAVILY_API_KEY; "
-                "use SEARCH_PROVIDER=mock explicitly for offline mode"
+                "set your Tavily API key in .env and restart the application"
             )
         search, search_mode = TavilySearchProvider(
             settings.tavily_api_key, timeout=settings.search_timeout_seconds

@@ -12,7 +12,7 @@ class Settings:
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
     tavily_api_key: str | None = None
-    database_path: str = "data/evidencepilot.db"
+    database_path: str = "data/sourcereport.db"
     max_queries_per_round: int = 8
     results_per_query: int = 4
     max_sources: int = 20
@@ -22,7 +22,7 @@ class Settings:
     search_timeout_seconds: float = 20.0
     llm_thinking_mode: str = "disabled"
     llm_reasoning_effort: str = "low"
-    llm_max_tokens_structured: int = 2048
+    llm_max_tokens_structured: int = 4096
     llm_max_tokens_citation_audit: int = 4096
     llm_max_tokens_report: int = 4096
     llm_timeout_seconds: float = 120.0
@@ -62,14 +62,14 @@ class Settings:
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             tavily_api_key=os.getenv("TAVILY_API_KEY") or None,
-            database_path=os.getenv("EVIDENCEPILOT_DB", "data/evidencepilot.db"),
+            database_path=os.getenv("SOURCEREPORT_DB") or "data/sourcereport.db",
             max_queries_per_round=int(os.getenv("MAX_QUERIES_PER_ROUND", "8")),
             results_per_query=int(os.getenv("RESULTS_PER_QUERY", "4")),
             max_sources=int(os.getenv("MAX_SOURCES", "20")),
             search_timeout_seconds=float(os.getenv("SEARCH_TIMEOUT_SECONDS", "20")),
             llm_thinking_mode=os.getenv("LLM_THINKING_MODE", "disabled").casefold(),
             llm_reasoning_effort=os.getenv("LLM_REASONING_EFFORT", "low"),
-            llm_max_tokens_structured=int(os.getenv("LLM_MAX_TOKENS_STRUCTURED", "2048")),
+            llm_max_tokens_structured=int(os.getenv("LLM_MAX_TOKENS_STRUCTURED", "4096")),
             llm_max_tokens_citation_audit=int(os.getenv("LLM_MAX_TOKENS_CITATION_AUDIT", "4096")),
             llm_max_tokens_report=int(os.getenv("LLM_MAX_TOKENS_REPORT", "4096")),
             llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "120")),

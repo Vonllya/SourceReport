@@ -80,7 +80,7 @@ class WorkflowNodes(CitationAuditMixin):
             node_started = time.monotonic()
             before = self._provider_metrics()
             calls_before = self.llm.calls
-            logger = logging.getLogger("evidencepilot.workflow")
+            logger = logging.getLogger("sourcereport.workflow")
             log_event(logger, "node_started", task_id=state["task_id"], node=name)
             if self.store:
                 self.store.record_node(state["task_id"], name, "started")
@@ -312,7 +312,7 @@ class WorkflowNodes(CitationAuditMixin):
         findings = "\n".join(f"- {e['claim']} [{e['source_id']}]" for e in evidence) or "- No reliable evidence was extracted."
         refs = "\n".join(f"- [{s.source_id}] [{s.title}]({s.url})" for s in sources)
         if isinstance(self.llm, FakeLLMProvider):
-            report = f"# Research Report: {state['question']}\n\n## Executive Summary\n\nThe findings below synthesize the collected and traceable evidence.\n\n## Research Process\n\nEvidencePilot planned {len(state['research_plan']['subquestions'])} subquestions, executed {len(state.get('completed_queries', []))} searches across {state.get('research_round', 0)} round(s), and retained {len(sources)} sources.\n\n## Key Findings\n\n{findings}\n\n## Limitations\n\nSearch coverage is bounded and source quality varies.\n\n## References\n\n{refs}"
+            report = f"# Research Report: {state['question']}\n\n## Executive Summary\n\nThe findings below synthesize the collected and traceable evidence.\n\n## Research Process\n\nSourceReport planned {len(state['research_plan']['subquestions'])} subquestions, executed {len(state.get('completed_queries', []))} searches across {state.get('research_round', 0)} round(s), and retained {len(sources)} sources.\n\n## Key Findings\n\n{findings}\n\n## Limitations\n\nSearch coverage is bounded and source quality varies.\n\n## References\n\n{refs}"
         else:
             prompt = (
                 "Write a concise Markdown research report using only the supplied evidence. "

@@ -4,7 +4,7 @@ import httpx
 import pytest
 from pypdf import PdfWriter
 
-from evidencepilot.fetcher import WebFetcher, extract_main_text, extract_pdf_text, is_safe_url
+from sourcereport.fetcher import WebFetcher, extract_main_text, extract_pdf_text, is_safe_url
 
 
 def test_url_safety():
@@ -42,7 +42,7 @@ async def test_fetcher_revalidates_and_blocks_unsafe_redirect(monkeypatch):
         return httpx.Response(302, headers={"Location": "http://127.0.0.1/private"})
 
     monkeypatch.setattr(
-        "evidencepilot.retrieval.fetch.is_safe_url", lambda url: "127.0.0.1" not in url
+        "sourcereport.retrieval.fetch.is_safe_url", lambda url: "127.0.0.1" not in url
     )
     fetcher = WebFetcher(transport=httpx.MockTransport(handler))
     with pytest.raises(ValueError, match="redirect target is unsafe"):
@@ -57,7 +57,7 @@ async def test_fetcher_allows_safe_redirect_and_limits_hops(monkeypatch):
             return httpx.Response(302, headers={"Location": "/final"})
         return httpx.Response(200, text="<main>Public evidence.</main>")
 
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(handler), max_redirects=1)
     assert await fetcher.fetch("https://public.example/start") == "Public evidence."
 
@@ -74,7 +74,7 @@ async def test_fetch_page_records_metadata_and_uses_cache(monkeypatch):
             headers={"Content-Type": "text/html; charset=utf-8"},
         )
 
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(handler))
     first = await fetcher.fetch_page("https://public.example/page")
     second = await fetcher.fetch_page("https://public.example/page")
@@ -85,7 +85,7 @@ async def test_fetch_page_records_metadata_and_uses_cache(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetcher_rejects_unsupported_content_type(monkeypatch):
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(
         lambda request: httpx.Response(200, content=b"binary", headers={"Content-Type": "image/png"})
     ))
@@ -95,8 +95,8 @@ async def test_fetcher_rejects_unsupported_content_type(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetcher_extracts_pdf_and_records_parser(monkeypatch):
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.extract_pdf_text", lambda content, max_chars: "PDF evidence")
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.extract_pdf_text", lambda content, max_chars: "PDF evidence")
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(
         lambda request: httpx.Response(
             200, content=b"minimal pdf bytes", headers={"Content-Type": "application/pdf"}
@@ -109,7 +109,7 @@ async def test_fetcher_extracts_pdf_and_records_parser(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetcher_rejects_missing_content_type(monkeypatch):
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(
         lambda request: httpx.Response(200, content=b"untyped content")
     ))
@@ -119,7 +119,7 @@ async def test_fetcher_rejects_missing_content_type(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetcher_blocks_https_downgrade_redirect(monkeypatch):
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(
         lambda request: httpx.Response(302, headers={"Location": "http://public.example/page"})
     ))
@@ -129,7 +129,7 @@ async def test_fetcher_blocks_https_downgrade_redirect(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetcher_rejects_invalid_content_length(monkeypatch):
-    monkeypatch.setattr("evidencepilot.retrieval.fetch.is_safe_url", lambda url: True)
+    monkeypatch.setattr("sourcereport.retrieval.fetch.is_safe_url", lambda url: True)
     fetcher = WebFetcher(transport=httpx.MockTransport(
         lambda request: httpx.Response(
             200, content=b"text", headers={"Content-Type": "text/plain", "Content-Length": "bad"}

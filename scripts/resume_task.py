@@ -1,4 +1,4 @@
-"""Resume a failed or interrupted EvidencePilot task from SQLite."""
+"""Resume a failed or interrupted SourceReport task from SQLite."""
 from __future__ import annotations
 
 import argparse
@@ -8,8 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evidencepilot.app import create_runtime
-from evidencepilot.config import Settings
+from sourcereport.app import create_runtime
+from sourcereport.config import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -3,11 +3,11 @@ from copy import deepcopy
 
 import pytest
 
-from evidencepilot.fetcher import WebFetcher
-from evidencepilot.providers import FakeLLMProvider
-from evidencepilot.search import MockSearchProvider
-from evidencepilot.storage import SQLiteStore
-from evidencepilot.workflow import ResearchWorkflow
+from sourcereport.fetcher import WebFetcher
+from sourcereport.providers import FakeLLMProvider
+from sourcereport.search import MockSearchProvider
+from sourcereport.storage import SQLiteStore
+from sourcereport.workflow import ResearchWorkflow
 
 
 @pytest.mark.parametrize("node_status,task_status", [("completed", "running"), ("failed", "failed")])

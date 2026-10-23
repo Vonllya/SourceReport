@@ -109,7 +109,7 @@ class WebFetcher:
         return page
 
     async def _fetch_page(self, url: str) -> FetchedPage:
-        headers = {"User-Agent": "EvidencePilot/0.2 (+https://github.com/Vonllya/EvidencePilot)"}
+        headers = {"User-Agent": "SourceReport/0.2 (+https://github.com/Vonllya/SourceReport)"}
         current_url = url
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout), follow_redirects=False, headers=headers,

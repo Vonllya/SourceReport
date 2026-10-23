@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from evidencepilot.fetcher import WebFetcher
-from evidencepilot.models import CitationBatch, CitationBatchItem, ClaimPatch, ClaimPatchBatch
-from evidencepilot.providers import LLMProvider
-from evidencepilot.search import MockSearchProvider
-from evidencepilot.workflow import ResearchWorkflow
+from sourcereport.fetcher import WebFetcher
+from sourcereport.models import CitationBatch, CitationBatchItem, ClaimPatch, ClaimPatchBatch
+from sourcereport.providers import LLMProvider
+from sourcereport.search import MockSearchProvider
+from sourcereport.workflow import ResearchWorkflow
 
 
 class FixedCorpusLLM(LLMProvider):

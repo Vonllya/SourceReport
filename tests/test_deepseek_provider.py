@@ -7,9 +7,9 @@ import httpx
 import pytest
 from openai import APIStatusError, APITimeoutError
 
-from evidencepilot.config import Settings
-from evidencepilot.models import CitationDecision
-from evidencepilot.providers import LLMError, OpenAILLMProvider
+from sourcereport.config import Settings
+from sourcereport.models import CitationDecision
+from sourcereport.providers import LLMError, OpenAILLMProvider
 
 
 def response(
@@ -109,15 +109,23 @@ def test_api_key_is_redacted_from_errors_and_logs(caplog):
     assert "secret-test-key" not in caplog.text
 
 
-def test_node_token_budgets():
-    settings = Settings(llm_max_tokens_structured=2048, llm_max_tokens_report=4096)
-    assert settings.token_budget("plan_research") == 2048
-    assert settings.token_budget("extract_evidence") == 2048
-    assert settings.token_budget("evaluate_evidence") == 1536
-    assert settings.token_budget("refine_queries") == 1024
-    assert settings.token_budget("verify_citations") == 4096
-    assert settings.token_budget("write_report") == 4096
-    assert settings.token_budget("revise_unsupported_claims") == 4096
+def test_node_token_budgets(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "mock")
+    monkeypatch.setenv("SEARCH_PROVIDER", "mock")
+    for name in (
+        "LLM_MAX_TOKENS_STRUCTURED", "LLM_MAX_TOKENS_CITATION_AUDIT", "LLM_MAX_TOKENS_REPORT"
+    ):
+        monkeypatch.delenv(name, raising=False)
+    for settings in (Settings(), Settings.from_env()):
+        llm, _ = provider(settings)
+        expected = {
+            "plan_research": 4096, "extract_evidence": 4096,
+            "evaluate_evidence": 1536, "refine_queries": 1024,
+            "verify_citations": 4096, "write_report": 4096,
+            "revise_unsupported_claims": 4096,
+        }
+        for node, budget in expected.items():
+            assert llm._request_kwargs(node, structured=node != "write_report")["max_tokens"] == budget
 
 
 @pytest.mark.asyncio
@@ -131,7 +139,7 @@ async def test_retryable_errors_have_finite_retries(monkeypatch, replies):
     async def no_sleep(_):
         return None
 
-    monkeypatch.setattr("evidencepilot.providers.openai.asyncio.sleep", no_sleep)
+    monkeypatch.setattr("sourcereport.providers.openai.asyncio.sleep", no_sleep)
     with pytest.raises(LLMError, match="finite retries"):
         await llm.text("hello")
     assert len(stub.kwargs) == 3 and llm.retries == 2
@@ -149,7 +157,7 @@ async def test_retryable_http_statuses_have_finite_retries(monkeypatch, status):
     async def no_sleep(_):
         return None
 
-    monkeypatch.setattr("evidencepilot.providers.openai.asyncio.sleep", no_sleep)
+    monkeypatch.setattr("sourcereport.providers.openai.asyncio.sleep", no_sleep)
     with pytest.raises(LLMError, match="finite retries"):
         await llm.text("hello")
     assert len(stub.kwargs) == 3 and llm.retries == 2
@@ -162,10 +170,10 @@ async def test_retryable_http_statuses_have_finite_retries(monkeypatch, status):
     'private-response-marker secret-test-key',
 ])
 async def test_validation_failures_do_not_persist_response_content(tmp_path, content):
-    from evidencepilot.fetcher import WebFetcher
-    from evidencepilot.search import MockSearchProvider
-    from evidencepilot.storage import SQLiteStore
-    from evidencepilot.workflow import ResearchWorkflow
+    from sourcereport.fetcher import WebFetcher
+    from sourcereport.search import MockSearchProvider
+    from sourcereport.storage import SQLiteStore
+    from sourcereport.workflow import ResearchWorkflow
 
     llm, _ = provider(Settings(), [response(content), response(content)])
     store = SQLiteStore(str(tmp_path / "errors.db"))

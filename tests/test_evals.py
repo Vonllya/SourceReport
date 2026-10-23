@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from evidencepilot.evals import evaluate_citations
+from sourcereport.evals import evaluate_citations
 
 
 @pytest.mark.asyncio

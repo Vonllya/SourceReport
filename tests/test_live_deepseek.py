@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from evidencepilot.config import Settings
-from evidencepilot.models import CitationDecision
-from evidencepilot.providers import OpenAILLMProvider
+from sourcereport.config import Settings
+from sourcereport.models import CitationDecision
+from sourcereport.providers import OpenAILLMProvider
 
 
 @pytest.mark.live
